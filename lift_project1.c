@@ -15,164 +15,88 @@
 
 // #pragma config statements should precede project file includes.
 // Use project enums instead of #define for ON and OFF.
-
-#include<xc.h>
-
-void delay(int a);
-void display(int r,char c);
-void write(char c);
-void read();
-void string_display(char *str);
-void check(char c,char c1);
-void motor_still();
-char a=0;
-void main(void)
+#include <xc.h>
+int floor,sensor;
+void delay(unsigned int a)
 {
-  PORTA=0x00;
-  TRISA=0x0F;
-  PORTB=0x00;
-  TRISB=0x0F;
-  PORTC=TRISC=0x00;
-  PORTD=TRISD=0x00;
-  PORTE=TRISE=0x00;
-  ANSEL=ANSELH=0x00;
-  display(0,0x38);
-  display(0,0x0e);
-  char floor='0';
-  char sensor='0';
-  while(1)
-{
-      if(RB0==1)
-      {
-          check(sensor,floor);
-          floor='3';
-          write(floor);
-          read();
-          display(0,0x80);
-          string_display("FLOOR ");
-          display(1,a);
-          if(RA0==0)
-          {
-              motor_still();
-              sensor='3';
-          }
-          while(RB0==1);
-      }
-       if(RB1==1)
-      {
-          check(sensor ,floor);
-          floor='2';
-          write(floor);
-          read();
-          display(0,0x80);
-          string_display("FLOOR ");
-          display(1,a);
-           if(RA1==0)
-          {
-               motor_still();
-               sensor='2';
-          }
-           while(RB1==1);
-
-      }
-      if(RB2==1)
-      {
-          check(sensor,floor);
-          floor='1';
-          write(floor);
-          read();
-          display(0,0x80);
-          string_display("FLOOR ");
-          display(1,a);
-           if(RA2==0)
-          {
-               motor_still();
-               sensor='1';
-          }
-           while(RB2==1);
-      }
-      if(RB3==1)
-      {
-          check(sensor,floor);
-          floor='0';
-          write(floor);
-          read();
-          display(0,0x80);
-          string_display("FLOOR ");
-          display(1,a);
-           if(RA3==0)
-          {
-               motor_still();
-               sensor='0';
-          }
-           while(RB3==1);
-      }
+    while(a--);
 }
-}
-void delay(int a)
+void enable()
 {
-  while(a--);
+    RE1=1;
+    delay(50);
+    RE1=0;
+    delay(50);
 }
-void display(int r,char c)
+void data(char a, char b)
 {
-  RE0=r;
-  PORTD=c;
-  RE1=1;
-  delay(10);
-  RE1=0;
-  delay(10);
+    RE0=a;
+    PORTD=b;
+    enable();
 }
-void write(char ec)
+void string(char *ptr)
 {
-    EEADR=0xD0;
-    EEPGD=0;
-    EEDATA=ec;
-    WREN=1;
-    EECON2=0x55;
-    EECON2=0xAA;
-    WR=1;
-    while(WR);
-    WREN=0;
-}
-void read()
-{
-    EEADR=0xD0;
-    EEPGD=0;
-    RD=1;
-    while(RD);
-    RD=0;
-    a=EEDATA;
-}
-void string_display(char *str)
-{
-
-    while(*str)
+    while(*ptr)
     {
-        display(1,*str++);
+        data(1,*ptr++);
     }
 }
-void check(char c,char c1)
+void main()
 {
-           if(c>c1){
-                 RC1=1;RC0=0;
-                display(0,0xC0);
-                string_display("Motor mvg bw");
-           }
-             else if(c==c1)
-             {
-                RC1=0;RC0=0;
-                display(0,0xC0);
-                string_display("Motor still");
-             }
-           else{
-               RC1=0;RC0=1;
-               display(0,0xC0);
-               string_display("Motor mvg fw");
-           }
-}
-void motor_still()
-{
-                RC1=0;RC0=0;
-                display(0,0xC0);
-                string_display("Motor still");
+    PORTA=PORTB=PORTD=PORTE=PORTC=0x00;
+    TRISA=0x0F;
+    TRISB=0x0F;
+    TRISC=TRISD=TRISE=0x00;
+    ANSEL=ANSELH=0x00;
+    
+    data(0,0x38);
+    data(0,0x0E);
+    data(0,0x80);
+    string("FLR");
+    while(1)
+    {
+         data(0,0x84);
+         data(1,floor+'0');
+         string(" FLR AT ");
+         data(1,sensor+'0');
+
+        if(RA0==1)
+            sensor=3;
+            
+        if(RA1==1)
+            sensor=2;
+        if(RA2==1)
+            sensor=1;
+        if(RA3==1)
+            sensor=0;
+        
+        if(RB0==1)
+            floor=3;
+        if(RB1==1)
+            floor=2;
+        if(RB2==1)
+            floor=1;
+        if(RB3==1)
+            floor=0;
+        
+        if(floor==sensor)
+        {
+            RC0=RC1=0;
+            data(0,0xc0);
+            string("Motor stop");
+        }
+        if(floor<sensor)
+        {
+            RC0=0;RC1=1;
+            data(0,0xc0);
+            string("Motor rev ");
+        }
+        if(floor>sensor)
+        {
+            RC1=0;RC0=1;
+            data(0,0xc0);
+            string("MOTOR for ");
+        }
+        
+    }
 }
